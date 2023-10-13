@@ -229,7 +229,7 @@ const detectImage = async (
   ctx.putImageData(mask_img, 0, 0); // put overlay to canvas
   console.log('Overlay rendered');
   renderBoxes(ctx, boxes); // draw boxes after overlay added to canvas
-  console.log('Boxes rendered');
+  console.log('Boxes rendered', boxes.length);
 
   input.delete(); // delete unused Mat
   overlay.delete(); // delete unused Mat
@@ -405,32 +405,32 @@ class Colors {
 const colors = new Colors();
 
 // Load image
-// document.getElementById("imgLoader").onchange = function (evt) {
-//   let tgt = evt.target,
-//     files = tgt.files;
-//   if (FileReader && files && files.length) {
-//     let fr = new FileReader();
-//     fr.onload = function () {
-//       document.getElementById("loadedImg").src = fr.result;
-//       // Clear canvas before new detection
-//       const context = canvas.getContext("2d");
-//       context.clearRect(0, 0, canvas.width, canvas.height);
-//     };
-//     fr.readAsDataURL(files[0]);
-//   }
-// };
+document.getElementById("imgLoader").onchange = function (evt) {
+  let tgt = evt.target,
+    files = tgt.files;
+  if (FileReader && files && files.length) {
+    let fr = new FileReader();
+    fr.onload = function () {
+      document.getElementById("loadedImg").src = fr.result;
+      // Clear canvas before new detection
+      const context = canvas.getContext("2d");
+      context.clearRect(0, 0, canvas.width, canvas.height);
+    };
+    fr.readAsDataURL(files[0]);
+  }
+};
 
-// function runInference() {
-//   detectImage(
-//     document.querySelector("#loadedImg"),
-//     document.querySelector("canvas"),
-//     mySession,
-//     topk,
-//     iouThreshold,
-//     scoreThreshold,
-//     modelInputShape
-//   );
-// }
+function runInference() {
+  detectImage(
+    document.querySelector("#loadedImg"),
+    document.querySelector("canvas"),
+    mySession,
+    topk,
+    iouThreshold,
+    scoreThreshold,
+    modelInputShape
+  );
+}
 
 async function setupCamera() {
   try {
@@ -449,26 +449,40 @@ async function setupCamera() {
 }
 
 
+// function drawVideoFrame(video, canvas, context) {
+//   context.drawImage(video, 0, 0, canvas.width, canvas.height);
+//   requestAnimationFrame(drawVideoFrame); // Continuously update the canvas with the video's current frame
+// }
+
 async function processVideo() {
-  console.log('Processing video')
+  console.log('Processing video');
   const video = await setupCamera();
+  const imageCanvas = document.getElementById('imagecanvas');
   const canvas = document.getElementById('canvas2');
-  const context = canvas.getContext('2d');
+  console.log({ video, imageCanvas, canvas })
+  const context = imageCanvas.getContext('2d');
 
-  async function frameProcessing() {
-    try {
-      context.drawImage(video, 0, 0, video.width, video.height);  // Draw the current video frame to the temporary canvas.
-      await detectImage(canvas, canvas, mySession, topk, iouThreshold, scoreThreshold, modelInputShape);  // Pass the temporary canvas to detectImage.
-      console.log('Frame processed');
-      requestAnimationFrame(frameProcessing);  // Request the next frame.
-    } catch (error) {
-      console.error('Error processing frame:', error);
-    }
-  }
-
-  frameProcessing();
+  await frameProcessing(video, imageCanvas, canvas, context);
 }
 
+function drawVideoFrame(video, context) {
+  console.log({ video, context })
+  console.log(!video || !context)
+  if (!video || !context) return;
+  context.drawImage(video, 0, 0, video.width, video.height);
+}
+
+async function frameProcessing(video, imageCanvas, canvas, context) {
+  try {
+    drawVideoFrame(video, context);
+    await detectImage(imageCanvas, canvas, mySession, topk, iouThreshold, scoreThreshold, modelInputShape);  // Pass the temporary canvas to detectImage.
+    console.log('Frame processed');
+    setTimeout(frameProcessing, 1000 / 15);  // Set timeout to achieve ~15 fps.
+    // requestAnimationFrame(drawVideoFrame(video, context));
+  } catch (error) {
+    console.error('Error processing frame:', error);
+  }
+}
 
 async function runVideoInference() {
   if (cv.onRuntimeInitialized) {

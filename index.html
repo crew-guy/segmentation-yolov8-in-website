@@ -30,8 +30,11 @@
                     
                     <div>   
                         <h3>Video inference</h3>
-                        <canvas id="canvas2" width="640" height="480"></canvas>
-                        <video id="video" width="640" height="480" autoplay></video>
+                        <div class="video-container">
+                            <canvas id="imagecanvas" width="640" height="480"></canvas>
+                            <canvas id="canvas2" width="640" height="480"></canvas>
+                            <video id="video" width="640" height="480" autoplay></video>
+                        </div>
                         <button onclick="runVideoInference()">Run Video Inference</button>
                     </div>
                 </div>
