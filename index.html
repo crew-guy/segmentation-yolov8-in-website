@@ -35,7 +35,10 @@
                             <canvas id="canvas2" width="640" height="480"></canvas>
                             <video id="video" width="640" height="480" autoplay></video>
                         </div>
-                        <button onclick="runVideoInference()">Run Video Inference</button>
+                        <button onclick="runVideoInference()">Infer live webcam video</button>
+                        <input id="videoInput" type="file">Upload Video</input>
+                        <button onclick="inferUploadedVideo()">Infer uploaded video</input>
+                        <button onclick="stopVideoInference()">Stop inferring video</input>
                     </div>
                 </div>
 

@@ -440,7 +440,12 @@ function runInference() {
 async function setupCamera() {
   try {
     const video = document.getElementById('video');
-    const stream = await navigator.mediaDevices.getUserMedia({ 'video': true });
+    const stream = await navigator.mediaDevices.getUserMedia({
+      'video': {
+        width: video.width,
+        height: video.height
+      }
+    });
     video.srcObject = stream;
     console.log('Video stream setup successful');
     return new Promise((resolve) => {
@@ -453,21 +458,17 @@ async function setupCamera() {
   }
 }
 
-
 // function drawVideoFrame(video, canvas, context) {
 //   context.drawImage(video, 0, 0, canvas.width, canvas.height);
 //   requestAnimationFrame(drawVideoFrame); // Continuously update the canvas with the video's current frame
 // }
 
 async function processVideo() {
-  console.log('Processing video');
   const video = await setupCamera();
   const imageCanvas = document.getElementById('imagecanvas');
   const canvas = document.getElementById('canvas2');
-  console.log({ video, imageCanvas, canvas })
   const context = imageCanvas.getContext('2d');
-
-  await frameProcessing(video, imageCanvas, canvas, context);
+  frameProcessing(video, imageCanvas, canvas, context);
 }
 
 function drawVideoFrame(video, context) {
@@ -477,38 +478,72 @@ function drawVideoFrame(video, context) {
   context.drawImage(video, 0, 0, video.width, video.height);
 }
 
+// async function frameProcessing(video, imageCanvas, canvas, context) {
+//   try {
+//     drawVideoFrame(video, context);
+//     await detectImage(imageCanvas, canvas, mySession, topk, iouThreshold, scoreThreshold, modelInputShape);  // Pass the temporary canvas to detectImage.
+//     // console.log('Frame processed');
+//     // setTimeout(frameProcessing, 1000 / 15);  // Set timeout to achieve ~15 fps.
+//     // requestAnimationFrame(drawVideoFrame(video, context));
+//   } catch (error) {
+//     console.error('Error processing frame:', error);
+//   }
+// }
+
+// Simplified frame processing
 async function frameProcessing(video, imageCanvas, canvas, context) {
-  try {
-    drawVideoFrame(video, context);
-    await detectImage(imageCanvas, canvas, mySession, topk, iouThreshold, scoreThreshold, modelInputShape);  // Pass the temporary canvas to detectImage.
-    console.log('Frame processed');
-    setTimeout(frameProcessing, 1000 / 15);  // Set timeout to achieve ~15 fps.
-    // requestAnimationFrame(drawVideoFrame(video, context));
-  } catch (error) {
-    console.error('Error processing frame:', error);
-  }
+  if (!video || !context) return;
+
+  context.drawImage(video, 0, 0, video.width, video.height);
+  await detectImage(imageCanvas, canvas, mySession, topk, iouThreshold, scoreThreshold, modelInputShape);
+
+  // Call this function again after this frame is processed
+  requestAnimationFrame(() => frameProcessing(video, imageCanvas, canvas, context));
 }
 
 async function runVideoInference() {
   if (cv.onRuntimeInitialized) {
-    console.log('OpenCV initialized');
-    setInterval(() => {
-      // if (!video.paused && !video.ended) {
-      //   // draw current video frame onto canvas
-      //   const context = canvas.getContext('2d');
-      //   context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      //   // process the frame using your detectImage function
-      //   detectImage(canvas, canvas, mySession, topk, iouThreshold, scoreThreshold, modelInputShape);
-      // } else {
-      //   clearInterval(interval); // stop processing if video is paused or ended
-      // }
-      processVideo();
-    }, 5)
+    processVideo();
   } else {
     cv.onRuntimeInitialized = async () => {
       console.log('OpenCV initialized');
-      processVideo();
+      const video = await setupCamera();
+      const imageCanvas = document.getElementById('imagecanvas');
+      const canvas = document.getElementById('canvas2');
+      const context = imageCanvas.getContext('2d');
+      frameProcessing(video, imageCanvas, canvas, context);
     }
   }
 }
+
+// Upload video and run inference on it
+const inferUploadedVideo = async () => {
+  const video = document.getElementById('video');
+  video.play();
+  // video.addEventListener('play', function () {
+  const interval = setInterval(() => {
+    const imageCanvas = document.getElementById('imagecanvas');
+    const canvas = document.getElementById('canvas2');
+    const context = imageCanvas.getContext('2d');
+    frameProcessing(video, imageCanvas, canvas, context);
+    // }, 40); // assuming ~25 frames per second, you can adjust this value
+  });
+}
+
+document.getElementById('videoInput').addEventListener('change', function (event) {
+  const file = event.target.files[0];
+  if (file) {
+    const objectURL = URL.createObjectURL(file);
+    const videoElement = document.getElementById('video');
+    videoElement.src = objectURL;
+    videoElement.load();  // Load and refresh the video source
+  }
+});
+
+const stopVideoInference = () => {
+  const video = document.getElementById('video');
+  video.pause();
+  video.src = '';
+  video.load();
+}
+
