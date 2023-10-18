@@ -244,7 +244,12 @@ const detectImage = async (
  * @return preprocessed image and configs
  */
 const preprocessing = (source, modelWidth, modelHeight, stride = 32) => {
-  const mat = cv.imread(source); // read from img tag
+  let mat // read from img tag
+  if (source instanceof HTMLCanvasElement) {
+    mat = cv.imread(source, cv.IMREAD_COLOR);
+  } else {
+    mat = cv.imread(source); // for HTMLImageElement
+  }
   const matC3 = new cv.Mat(mat.rows, mat.cols, cv.CV_8UC3); // new image matrix
   cv.cvtColor(mat, matC3, cv.COLOR_RGBA2BGR); // RGBA to BGR
 
@@ -487,7 +492,19 @@ async function frameProcessing(video, imageCanvas, canvas, context) {
 async function runVideoInference() {
   if (cv.onRuntimeInitialized) {
     console.log('OpenCV initialized');
-    processVideo();
+    setInterval(() => {
+      // if (!video.paused && !video.ended) {
+      //   // draw current video frame onto canvas
+      //   const context = canvas.getContext('2d');
+      //   context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      //   // process the frame using your detectImage function
+      //   detectImage(canvas, canvas, mySession, topk, iouThreshold, scoreThreshold, modelInputShape);
+      // } else {
+      //   clearInterval(interval); // stop processing if video is paused or ended
+      // }
+      processVideo();
+    }, 5)
   } else {
     cv.onRuntimeInitialized = async () => {
       console.log('OpenCV initialized');
